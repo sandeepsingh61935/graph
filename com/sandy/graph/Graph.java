@@ -2,6 +2,7 @@ package com.sandy.graph;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.Queue;
 
 class Pair<T1, T2> {
@@ -35,18 +36,32 @@ class Pair<T1, T2> {
 }
 public class Graph {
     private final int NUM_OF_VERTICES;
-    private final ArrayList<ArrayList<Integer>> graph;
-
-    public Graph(int numVertices) {
+    private ArrayList<ArrayList<Integer>> graph;
+    private ArrayList<ArrayList<Pair<Integer, Integer>>> weightedGraph;
+    public Graph(int numVertices,boolean isWeightedGraph) {
         this.NUM_OF_VERTICES = numVertices;
-        this.graph = new ArrayList<>(this.NUM_OF_VERTICES);
-        for (int i = 0; i < this.NUM_OF_VERTICES; i++) {
-            this.graph.add(new ArrayList<>());
+        if (isWeightedGraph) {
+            this.weightedGraph = new ArrayList<ArrayList<Pair<Integer, Integer>>>(this.NUM_OF_VERTICES);
+            for (int i = 0; i < this.NUM_OF_VERTICES; i++) {
+                this.weightedGraph.add(new ArrayList<>());
+            }
+        } else {
+            this.graph = new ArrayList<ArrayList<Integer>>(this.NUM_OF_VERTICES);
+            for (int i = 0; i < this.NUM_OF_VERTICES; i++) {
+                this.graph.add(new ArrayList<>());
+            }
         }
+        
     }
     //add an edge from vertex u to vertex v
     public void addEdge(int u, int v) {
         graph.get(u).add(v);
+    }
+
+    // add weighted edge from vertex u to vertex v
+    public void addWeightedEdge(int u, int v, int weight) {
+        Pair<Integer, Integer> pair = new Pair<>(v, weight);
+        weightedGraph.get(u).add(pair);
     }
 
     // print adjacency list representation of graph
@@ -64,6 +79,12 @@ public class Graph {
     public ArrayList<Integer> getAdjacentVertices(int v) {
         return graph.get(v);
     }
+
+    // return the list of weights adjacent to vertex v
+    public ArrayList<Pair<Integer, Integer>> getAdjacentVerticesWithWeights(int v) {
+        return weightedGraph.get(v);
+    }
+
     //return the number of vertices in the graph
     public int getNumOfVertices() {
         return NUM_OF_VERTICES;
@@ -401,6 +422,8 @@ public class Graph {
 
     // topological sort using BFS(KAHN's Algorithm)
     // works only for DAG(Directed Acyclic Graph)
+    // Space Complexity: O(V+E)
+    // Time complexity: O(V+E)
     public ArrayList<Integer> topologicalSortUsingBFS() {
         // indegree of each vertex is stored in this list  
         ArrayList<Integer> indegree = new ArrayList<>();
@@ -431,6 +454,64 @@ public class Graph {
         return topSort;
     }
 
+
+    // shortest distance between source and all the vertices USING BFS algorithm
+    // ASSUMPTION: unit weights
+    // Time Complexity: O(V+E)
+    // Space Complexity: O(V)
+    public ArrayList<Integer> shortestDistanceUsingBFS(int source) {
+        ArrayList<Integer> distance = new ArrayList<>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            distance.add(Integer.MAX_VALUE);
+        }
+        distance.set(source, 0);
+        ArrayList<Integer> queue = new ArrayList<>();
+        queue.add(source);
+        while(!queue.isEmpty()) {
+            int u = queue.remove(0);
+            ArrayList<Integer> adjacentVertices = getAdjacentVertices(u);
+            for(int v : adjacentVertices) {
+                if(distance.get(v) == Integer.MAX_VALUE) {
+                    distance.set(v, distance.get(u) + 1);
+                    queue.add(v);
+                }
+            }
+        }
+        return distance;
+    }
     
+    // shortest distance between source and all the vertices USING Dijkstra's algorithm
+    // Time Complexity: O(V^2)
+    // Space Complexity: O(V)
+    public ArrayList<Integer> shortestDistanceUsingDijkstra(int source) {
+        ArrayList<Integer> distance = new ArrayList<>();
+        ArrayList<Boolean> visited = new ArrayList<>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            distance.add(Integer.MAX_VALUE);
+            visited.add(false);
+        }
+        distance.set(source, 0);
+        PriorityQueue<Pair<Integer,Integer>> pq = new PriorityQueue<>();
+        pq.add(new Pair<>(0,source));
+        while(!pq.isEmpty()) {
+            int v = pq.remove().getSecond();
+            visited.set(v, true);
+            ArrayList<Pair<Integer,Integer>> adjacentVertices = getAdjacentVerticesWithWeights(v);
+            for(Pair<Integer,Integer> pair : adjacentVertices) {
+                int u = pair.getSecond();
+                int w = pair.getFirst();
+                if (!visited.get(u)) {
+                    if (distance.get(u) > distance.get(v) + w) {
+                        distance.set(u, distance.get(v) + w);
+                        pq.add(new Pair<>(distance.get(u), u));
+                    }
+                }
+            }
+        }
+        return distance;
+    }
+
+
     
+
 }
