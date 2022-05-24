@@ -481,8 +481,8 @@ public class Graph {
     }
     
     // shortest distance between source and all the vertices USING Dijkstra's algorithm
-    // Time Complexity: O(V^2)
-    // Space Complexity: O(V)
+    // Time Complexity: O((N+E)logN) = O((NlogN)
+    // Space Complexity: O(NUM_OF_VERTICES)
     public ArrayList<Integer> shortestDistanceUsingDijkstra(int source) {
         ArrayList<Integer> distance = new ArrayList<>();
         ArrayList<Boolean> visited = new ArrayList<>();
