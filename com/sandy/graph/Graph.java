@@ -5,35 +5,6 @@ import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
-class Pair<T1, T2> {
-    private T1 first;
-    private T2 second;
-
-    public Pair(T1 first, T2 second) {
-        this.first = first;
-        this.second = second;
-    }
-
-    public T1 getFirst() {
-        return first;
-    }
-
-    public T2 getSecond() {
-        return second;
-    }
-
-    public void setFirst(T1 first) {
-        this.first = first;
-    }
-
-    public void setSecond(T2 second) {
-        this.second = second;
-    }
-
-    public String toString() {
-        return "(" + first + ", " + second + ")";
-    }
-}
 public class Graph {
     private final int NUM_OF_VERTICES;
     private ArrayList<ArrayList<Integer>> graph;
@@ -59,6 +30,7 @@ public class Graph {
     }
 
     // add weighted edge from vertex u to vertex v
+    // (u--> [(v,weight)])
     public void addWeightedEdge(int u, int v, int weight) {
         Pair<Integer, Integer> pair = new Pair<>(v, weight);
         weightedGraph.get(u).add(pair);
@@ -90,6 +62,16 @@ public class Graph {
         return NUM_OF_VERTICES;
     }
 
+    // transpose the graph
+    public Graph transposeGraph(boolean isWeightedGraph) {
+        Graph g = new Graph(this.NUM_OF_VERTICES, isWeightedGraph);
+        for (int i = 0; i < this.NUM_OF_VERTICES; i++) {
+            for (int j = 0; j < this.graph.get(i).size(); j++) {
+                g.addEdge(this.graph.get(i).get(j), i);
+            }
+        }
+        return g;
+    }
     /**
      * @description breadthfirst search of vertices in the graph
      */
@@ -385,6 +367,33 @@ public class Graph {
         }
         return true;
     }
+    //topological sort using DFS in weighted DAG
+    public ArrayList<Integer> weightedTopologicalSortUsingDFS() {
+        ArrayList<Boolean> visited = new ArrayList<>();
+        for (int i = 0; i < NUM_OF_VERTICES; i++) {
+            visited.add(false);
+        }
+
+        ArrayList<Integer> stack = new ArrayList<>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            if(!visited.get(i)) {
+                weightedTopologicalSortUtilUsingDFS(i, visited, stack);
+            }
+        }
+        return stack;
+    }
+
+    // weightedTopologicalSortUtilUsingDFS 
+    private void weightedTopologicalSortUtilUsingDFS(int i, ArrayList<Boolean> visited, ArrayList<Integer> stack) {
+        visited.set(i,true);
+        ArrayList<Pair<Integer, Integer>> adjacentVertices = this.getAdjacentVerticesWithWeights(i);
+        for(Pair<Integer, Integer> pair : adjacentVertices) {
+            if(!visited.get(pair.getFirst())) {
+                weightedTopologicalSortUtilUsingDFS(pair.getFirst(), visited, stack);
+            }
+        }
+        stack.add(i);
+    }
 
     // topological sort using DFS
     public ArrayList<Integer> topologicalSortUsingDFS() {
@@ -510,8 +519,298 @@ public class Graph {
         }
         return distance;
     }
+    /**
+     * @read
+     * shortest distance between source and all the vertices
+        graph type:DAG
+        Time Complexity: O(V+E)
+        Space Complexity: O(V) 
+        steps: 
+            1. topSort
+            2. normal bfs traversal
+            3. update distance
+        @param source the source vertex
+     */
+
+    public ArrayList<Integer> shortestDistanceUsingBFSForDAG(int source) {
+        ArrayList<Integer> distance = new ArrayList<>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            distance.add(Integer.MAX_VALUE);
+        }
+        distance.set(source, 0);
+        ArrayList<Integer> stack = this.weightedTopologicalSortUsingDFS();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            int u = stack.get(i);
+            ArrayList<Pair<Integer,Integer>> adjacentVertices = this.getAdjacentVerticesWithWeights(u);
+            for(Pair<Integer,Integer> pair : adjacentVertices) {
+                int v = pair.getFirst();
+                int w = pair.getSecond();
+                if(distance.get(v) == Integer.MAX_VALUE) {
+                    distance.set(v, distance.get(u) + w);
+                }
+                else if(distance.get(v) > distance.get(u) + w) {
+                    distance.set(v, distance.get(u) + w);
+                }
+            }
+        }
+        return distance;
+    }
+
+    // TC : O(VLOGV + E)
+    // SC : O(V)
+    public void minimumSpanningTree() {
+        ArrayList<Integer> distance = new ArrayList<Integer>();
+        ArrayList<Boolean> isMST = new ArrayList<> ();
+        ArrayList<Integer> parent = new ArrayList<>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            distance.add(Integer.MAX_VALUE);
+            isMST.add(false);
+            parent.add(-1);
+        }
+
+        distance.set(0,0);
+        parent.set(0,-1);
+        // pair<distance, vertex>
+        PriorityQueue<Pair<Integer,Integer>> pq = new PriorityQueue<>();
+        pq.add(new Pair<>(distance.get(0),0));
+        while(!pq.isEmpty()) {
+            Pair<Integer,Integer> pair = pq.remove();
+            int u = pair.getSecond();
+            isMST.set(u, true);
+            ArrayList<Pair<Integer,Integer>> adjacentVertices = this.getAdjacentVerticesWithWeights(u);
+            for(Pair<Integer,Integer> pair1 : adjacentVertices) {
+                int v = pair1.getFirst();
+                int w = pair1.getSecond();
+                if(!isMST.get(v) && distance.get(v) > w) {
+                    parent.set(u,v);
+                    distance.set(v, w);
+                    pq.add(new Pair<>(w, v));
+                }
+            }
+        }
+        // print spanning tree  
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            if(parent.get(i) != -1) {
+                System.out.println(i + " " + parent.get(i));
+            }
+        }
+    }
 
 
+    // kruskal's algorithm
+    // TC : O(ElogE)
+    // SC : O(E)
+    // implement the algorithm
+    public void kruskal() {
+        PriorityQueue<Pair<Integer,Pair<Integer,Integer>>> pq = new PriorityQueue<>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            ArrayList<Pair<Integer,Integer>> adjacentVertices = this.getAdjacentVerticesWithWeights(i);
+            for(Pair<Integer,Integer> pair : adjacentVertices) {
+                int v = pair.getFirst();
+                int w = pair.getSecond();
+                pq.add(new Pair<>(w, new Pair<>(i, v)));
+            }
+        }
+        int i = 0;
+        int[] parent = new int[NUM_OF_VERTICES];
+        for(int j = 0; j < NUM_OF_VERTICES; j++) {
+            parent[j] = -1;
+        }
+        while(!pq.isEmpty() && i < NUM_OF_VERTICES - 1) {
+            Pair<Integer,Pair<Integer,Integer>> pair = pq.remove();
+            int u = pair.getSecond().getFirst();
+            int v = pair.getSecond().getSecond();
+            if(parent[u] == -1 && parent[v] == -1) {
+                parent[u] = v;
+                parent[v] = u;
+                i++;
+            }
+        }
+        // print spanning tree  
+        for(int j = 0; j < NUM_OF_VERTICES; j++) {
+            if(parent[j] != -1) {
+                System.out.println(j + " " + parent[j]);
+            }
+        }
+    }
+
+
+    /**
+     * @description implement krushal's algorithm (disjoint set)
+     * steps:
+     * 1. sort the edges in non-decreasing order of their weight
+     * 2. create a disjoint set
+     * 3. for each edge, if the two vertices are not in the same set, add the edge to the MST
+     * 
+     * FINALLY NOTE:
+     *  TC: O(ElogE) for sorting the edges + O(E*4C) for creating the disjoint set C is the constant values.so, O(ELOGE)    
+     *  SC: O(E) sorting , O(V) for parent and O(V) for rank.O(V+E)
+     */
+
+     public void MSTUsingKruskals() {
+         // sort the edges in non-decreasing order of their weight
+         // <weight,<u,v>>
+        PriorityQueue<Pair<Integer,Pair<Integer,Integer>>> pq = new PriorityQueue<Pair<Integer,Pair<Integer,Integer>>>();
+        for(int i =0 ;i < NUM_OF_VERTICES; i++) {
+            for(Pair<Integer,Integer> pair: this.getAdjacentVerticesWithWeights(i)) {
+                int v = pair.getFirst();
+                int w = pair.getSecond();
+                pq.add(new Pair<>(w, new Pair<>(i, v)));
+            }
+        }
+
+        // create a disjoint set
+        DisjointSet ds  = new DisjointSet();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            ds.makeSet(i);
+        }
+
+        // for each edge, if the two vertices are not in the same set, add the edge to the MST
+
+        while(!pq.isEmpty()) {
+            Pair<Integer,Pair<Integer,Integer>> pair = pq.remove();
+            int u = pair.getSecond().getFirst();
+            int v = pair.getSecond().getSecond();
+            if(!ds.isSameSet(u, v)) {
+                System.out.println(u + "->" + v);
+                ds.union(u, v);
+            }
+        }
+        return;
+    } 
+
+    public void findBrighesUtilDFS(int i,int parent, ArrayList<Boolean> isVisited,ArrayList<Integer> tin, ArrayList<Integer>low, int timer,ArrayList<Pair<Integer,Integer>> brighes) {
+        isVisited.set(i,true);
+        tin.set(i,timer+1);
+        low.set(i,timer+1);
+
+        ArrayList<Pair<Integer,Integer>> adjacentVertices = this.getAdjacentVerticesWithWeights(i);
+
+        for(Pair<Integer,Integer> pair: adjacentVertices) {
+            int v = pair.getFirst();
+            if (v == parent) continue;
+            if(!isVisited.get(v)) {
+                findBrighesUtilDFS(v,i, isVisited, tin, low, timer,brighes);
+                low.set(i, Math.min(low.get(i), low.get(v)));
+                if (low.get(v) > tin.get(i)) {
+                    brighes.add(new Pair<>(i,v));
+                }
+            } else {
+                low.set(i, Math.min(low.get(i), tin.get(v)));
+            }
+        }
+        return;
+    }
+    // find brighes in graph
+    public ArrayList<Pair<Integer, Integer>> findBrighes() {
+        //result array
+        ArrayList<Pair<Integer, Integer>> brighes = new ArrayList<>();
+        ArrayList<Boolean> isVisited = new ArrayList<>();
+        ArrayList<Integer> tin = new ArrayList<>();
+        ArrayList<Integer> low = new ArrayList<>();
+        int timer = 0 ;
+        for(int i =0 ;i < NUM_OF_VERTICES; i++)
+            isVisited.add(false);
+        
+        for(int i = 0 ; i < NUM_OF_VERTICES; i++) {
+            if(!isVisited.get(i)) {
+                findBrighesUtilDFS(i,-1, isVisited, tin, low, timer,brighes);
+            }
+        }
+        return brighes;
+    }
+
+    // articulation util
+    public void findArticulationPointsUtil(int node, int parent,int timer, ArrayList<Boolean> isVisited, ArrayList<Integer> tin , ArrayList<Integer> low  , ArrayList<Integer> ap) {
+        timer++;
+        isVisited.set(node,true);
+        tin.set(node,timer);
+        low.set(node,timer);
+
+        ArrayList<Integer> adjacentVertices = this.getAdjacentVertices(node);
+        int childCount  = 0 ;
+
+        for(int v : adjacentVertices) {
+            if (v == parent) continue; 
+
+            if (!isVisited.get(node)) {
+                findArticulationPointsUtil(node, parent, timer, isVisited, tin, low, ap);
+                low.set(node,Math.min(low.get(node),low.get(v)));
+                // parent!=-1 means removing root won't results in a new articulation point
+                if (low.get(v) >= tin.get(node) && parent != -1 ) {
+                    ap.set(node,1);
+                }
+                childCount++;
+            }
+            else {
+                low.set(node,Math.min(low.get(node),tin.get(v)));
+            }
+        }
+        // handle root node that has no parent and has individual children
+        // removing this results into more than one components of the graph
+        if (parent == -1 && childCount > 1) {
+            ap.set(node,1);
+        }
+        return;
+    }
+
+
+    // find articulations points in graph
+    public ArrayList<Integer> findArticulationPoints() {
+        ArrayList<Boolean> isVisited  = new ArrayList<>();
+        ArrayList<Integer> tin = new ArrayList<>();
+        ArrayList<Integer> low = new ArrayList<>();
+        ArrayList<Integer> ap = new ArrayList<>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            isVisited.add(false);
+            ap.add(0);
+        }
+        int timer = 0 ;
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            if(!isVisited.get(i)) {
+                findArticulationPointsUtil(i,-1,timer, isVisited, tin, low, ap);
+            }
+        }
+        return ap;
+    }
+
+    public void printSCCUtilDFS(int node, ArrayList<Boolean> isVisited) {
+        isVisited.set(node,true);
+        System.out.print(node + " ");
+        for(int v : this.getAdjacentVertices(node)) {
+            if (!isVisited.get(v)) {
+                printSCCUtilDFS(v, isVisited);
+            }
+        }
+    }
+    // print SCC using kosaraju's algorithm
+    // TC: O(V+E)
+    // SC: O(V+E)
+    public void printSCC() {
+        /**
+         * steps:
+         * 1. topsort
+         * 2. transpose graph
+         * 3. dfs on the transposed graph
+         */
+
+        // 1. topsort
+        ArrayList<Integer> topsort = this.topologicalSortUsingDFS();
+        // 2. transpose graph
+        Graph g = this.transposeGraph(false);
+        // 3. dfs on the transposed graph
+        ArrayList<Boolean> isVisited = new ArrayList<>();
+        for (int i = 0; i < NUM_OF_VERTICES; i++) {
+            isVisited.add(false);
+        }
+        for (int i =  0; i < topsort.size(); i++) {
+            int node = topsort.get(i);
+            if (!isVisited.get(node)) {
+                g.printSCCUtilDFS(node, isVisited);
+            }
+        }
+    }
+
+    // implement trajan's algorithm
     
-
 }
