@@ -519,6 +519,65 @@ public class Graph {
         }
         return distance;
     }
+
+    /**
+     * @read
+     * conditions:
+     * 1.works only for DG with + positive cycle
+     * 2.works for undirected graph but shouldn't contain negative weight edges.In order for Bellman to work on 
+     * undirected graph, we need to add directed edges from (v->v) and (v->u).Since it doesn't work for negative cycle. therefore cannot operate on this graph.
+     * 3. if there is a negative cycle, this algorithm will notify us.
+     * 
+     * 
+     * APPROACH:
+     * 1. relax all edges V-1 times;
+     * 2. relax mean:
+     *       distance[u] + weight[u][v] < distance[v]
+     *              distance[v] = distance[u] + weight[u][v]
+     * 3. relax one more time to check for negative cycle.
+     * @param source
+     * @param destination
+     * @return shortest path between source and destination
+     * @throw IllegalArgumentException
+     * Time Complexity: O(V*E)
+     * Space Complexity: O(V)
+     */
+    
+    // shortest distance between source and destination USING Bellman-Ford algorithm
+
+    public ArrayList<Integer> shortestPathUsingBellmanFord(int source, int destination) {
+        ArrayList<Integer> distance = new ArrayList<Integer>();
+        for(int i = 0; i < NUM_OF_VERTICES; i++) {
+            distance.add(Integer.MAX_VALUE);
+        }
+        distance.set(0, 0);
+
+        for(int i = 0; i < NUM_OF_VERTICES - 1; i++) {
+            for(int u = 0; u < NUM_OF_VERTICES; u++) {
+                for(Pair<Integer, Integer> pair : getAdjacentVerticesWithWeights(u)) {
+                    int w = pair.getSecond();
+                    int v = pair.getFirst();
+                    if(distance.get(u) + w < distance.get(v)) {
+                        distance.set(v, distance.get(u) + w);
+                    }
+                }
+            }
+        }
+
+        for(int u = 0; u < NUM_OF_VERTICES; u++) {
+            for(Pair<Integer, Integer> pair : getAdjacentVerticesWithWeights(u)) {
+                int w = pair.getSecond();
+                int v = pair.getFirst();
+                if(distance.get(u) + w < distance.get(v)) {
+                    // throw new RuntimeException("Negative cycle detected");
+                    throw new IllegalArgumentException("Negative cycle detected");
+                }
+            }
+        }
+        return distance;
+    }
+
+
     /**
      * @read
      * shortest distance between source and all the vertices
@@ -812,5 +871,4 @@ public class Graph {
     }
 
     // implement trajan's algorithm
-    
 }
